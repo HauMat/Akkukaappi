@@ -1,0 +1,83 @@
+TÄMÄN KOODIN VOI KOPIOIDA SUORAAN ARDUINO IDEEN, JOS JOSTAIN SYYSDTÄ ON TARVE. KOODIA VOI MYÖS MUUTTAA.______________
+
+#include <DHT.h>
+#include <LiquidCrystal.h>
+
+// ===== DHT11 ===== tässä lämpöanturin pinni 2 digital
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+// ===== LCD (RS, E, D4, D5, D6, D7) ===== tässä on näytön pinnit ja missä ne on arduinossa
+LiquidCrystal lcd(7, 8, 10, 11, A3, A2);
+
+// ===== Outputs =====   releen ja piipparin pinnit
+const int relayPin = 13;
+const int buzzerPin = 1;
+
+// Motor Shield Rev3 (Fan A) nämä pinnit on käytössä motroshieldillä niihin ei voi kytkeä mitään.
+const int dirA = 12;
+const int pwmA = 3;
+const int brakeA = 9;
+// tässä on tuulettimien koodi, motorshield ohjaa niitä, voisi kokeilla muuttaa nopeuksia jos tuuletin sen sallii.
+void setup() {
+  dht.begin();
+  lcd.begin(16, 2);
+
+  pinMode(relayPin, OUTPUT);
+  pinMode(buzzerPin, OUTPUT);
+
+  pinMode(dirA, OUTPUT);
+  pinMode(pwmA, OUTPUT);
+  pinMode(brakeA, OUTPUT);
+
+  digitalWrite(brakeA, LOW);
+  digitalWrite(relayPin, LOW);
+  digitalWrite(buzzerPin, LOW);
+
+  lcd.print("System starting");
+  delay(2000);
+  lcd.clear();
+}
+// perus koodia lämmön lukemisesta
+void loop() {
+  float temp = dht.readTemperature();
+  float hum  = dht.readHumidity();
+
+  if (isnan(temp) || isnan(hum)) {
+    lcd.setCursor(0, 0);
+    lcd.print("Sensor Error   ");
+    delay(2000);
+    return;
+  }
+
+  // ===== LCD DISPLAY ===== tässä on komennot mitä näytöllä näkyy
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(temp);
+  lcd.print("C   ");
+
+  lcd.setCursor(0, 1);
+  lcd.print("H:");
+  lcd.print(hum);
+  lcd.print("%   ");
+
+  // ===== FAN (>=25C) ===== tässä on tuulettimien herätys lämpötila, muuttamalla numeroa "if temp >=32" sitä voi säätää
+  if (temp >= 32.0) {
+    digitalWrite(dirA, HIGH);
+    analogWrite(pwmA, 255);
+  } else {
+    analogWrite(pwmA, 0);
+  }
+
+  // ===== ALARM (>=30C) ===== tässä on hälytys lämpötila
+  if (temp >= 45.0) {
+    digitalWrite(relayPin, HIGH);
+    digitalWrite(buzzerPin, HIGH);
+  } else {
+    digitalWrite(relayPin, LOW);
+    digitalWrite(buzzerPin, LOW);
+  }
+
+  delay(2000);
+} 
